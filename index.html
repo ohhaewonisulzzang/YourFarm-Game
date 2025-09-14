@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YourFarm Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        /* 픽셀 스타일의 게임 UI를 위한 기본 설정 */
+        body {
+            font-family: 'Press Start 2P', sans-serif;
+            background-color: #4a5d4e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        .game-container {
+            background-color: #c7d8c5;
+            border: 4px solid #333;
+            box-shadow: 8px 8px 0 #333;
+            padding: 2rem;
+            width: 100%;
+            max-width: 800px;
+            position: relative;
+        }
+
+        .farm-visual {
+            min-height: 200px;
+            background-color: #8b4513;
+            border: 2px solid #5d2e0b;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-auto-rows: minmax(80px, 1fr);
+            gap: 0.5rem;
+            padding: 0.5rem;
+        }
+
+        .farm-plot {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #6a3b11;
+            border: 2px solid #4a290a;
+            transition: transform 0.1s, background-color 0.5s;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .farm-plot:hover {
+            transform: scale(1.05);
+        }
+
+        .empty-plot {
+             background-color: #6a3b11;
+        }
+        
+        .weed-plot {
+            background-color: #6a3b11;
+            animation: pulse 1s infinite alternate;
+        }
+
+        .growing {
+            background-color: #4a632e;
+        }
+
+        .ready {
+            background-color: #22c55e;
+        }
+        
+        .progress-bar-container {
+            width: 80%;
+            height: 8px;
+            background-color: #555;
+            border: 1px solid #333;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background-color: #38bdf8;
+            transition: width 0.1s linear;
+        }
+        
+        .button-style {
+            transition: all 0.1s;
+            border: 2px solid #333;
+            box-shadow: 4px 4px 0 #333;
+        }
+        .button-style:hover {
+            box-shadow: 2px 2px 0 #333;
+            transform: translate(2px, 2px);
+        }
+        .button-style:active {
+            box-shadow: 0 0 0 #333;
+            transform: translate(4px, 4px);
+        }
+        .button-style:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .money-popup {
+            position: absolute;
+            font-weight: bold;
+            color: #ffde54;
+            text-shadow: 2px 2px 0 #333;
+            font-size: 1.5rem;
+            animation: floatAndFade 1s forwards;
+            pointer-events: none;
+            text-align: center;
+        }
+        
+        .xp-popup {
+            position: absolute;
+            font-weight: bold;
+            color: #38bdf8;
+            text-shadow: 2px 2px 0 #333;
+            font-size: 1.5rem;
+            animation: floatAndFade 1s forwards;
+            pointer-events: none;
+            text-align: center;
+        }
+
+        @keyframes floatAndFade {
+            from {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.05); }
+        }
+        
+        .shop-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .shop-container {
+            background-color: #fff;
+            padding: 2rem;
+            border: 4px solid #333;
+            box-shadow: 8px 8px 0 #333;
+            width: 90%;
+            max-width: 400px;
+        }
+        
+        .message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            padding: 2rem;
+            border: 4px solid #333;
+            box-shadow: 8px 8px 0 #333;
+            text-align: center;
+            z-index: 20;
+            display: none;
+        }
+
+        .title-text {
+            color: #333;
+            text-shadow: 2px 2px 0 #ffde54;
+        }
+
+        /* 시작 화면 스타일 */
+        .intro-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: black;
+            color: white;
+            z-index: 50;
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .start-menu {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .story-text-container {
+            white-space: pre-wrap;
+            max-width: 80%;
+            font-size: 1rem;
+            line-height: 1.5;
+            animation: flicker 1.5s infinite alternate;
+        }
+
+        /* 언더테일 스타일 텍스트 타이핑 효과 */
+        .typing-cursor {
+            animation: blink 0.7s step-end infinite;
+        }
+
+        @keyframes blink {
+            from, to { border-color: transparent; }
+            50% { border-color: white; }
+        }
+
+        .start-menu-button {
+            background-color: transparent;
+            color: white;
+            font-size: 1.5rem;
+            padding: 0.5rem 1rem;
+            border: 2px solid white;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 4px 4px 0 white;
+        }
+
+        .start-menu-button:hover {
+            background-color: white;
+            color: black;
+            box-shadow: 2px 2px 0 white;
+            transform: translate(2px, 2px);
+        }
+
+        @keyframes flicker {
+            0% { opacity: 1; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+
+        .hidden {
+            display: none;
+        }
+        
+        /* 픽셀 아이콘 스타일 */
+        .pixel-icon {
+            width: 32px;
+            height: 32px;
+            background-repeat: no-repeat;
+            background-size: contain;
+            image-rendering: pixelated;
+        }
+        
+        @media (min-width: 768px) {
+            .pixel-icon {
+                width: 48px;
+                height: 48px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <!-- 시작 및 스토리 화면 -->
+    <div id="intro-screen" class="intro-screen">
+        <div id="start-menu" class="start-menu">
+            <h1 class="text-3xl font-bold mb-4">YourFarm Game</h1>
+            <button id="startGameBtn" class="start-menu-button">시작하기</button>
+            <button id="languageBtn" class="start-menu-button">언어: 한국어</button>
+        </div>
+        <div id="storyTextContainer" class="story-text-container hidden">
+            <p id="storyText"></p>
+        </div>
+    </div>
+    
+    <!-- 메인 게임 화면 -->
+    <div id="game-screen" class="game-container hidden">
+        <h1 class="text-3xl font-bold text-center mb-6 title-text">YourFarm Game</h1>
+        
+        <!-- 게임 상태 정보 -->
+        <div class="flex flex-wrap justify-between items-center mb-6">
+            <div class="flex items-center space-x-2 w-1/2 md:w-auto mb-2 md:mb-0">
+                <div id="moneyIcon" class="pixel-icon"></div>
+                <span id="money" class="text-2xl font-bold text-green-700">₩100</span>
+            </div>
+            <div class="flex items-center space-x-2 w-1/2 md:w-auto mb-2 md:mb-0 justify-end">
+                <div id="seedsIcon" class="pixel-icon"></div>
+                <span id="seeds" class="text-2xl font-bold text-gray-700">0</span>
+            </div>
+            <div class="flex items-center space-x-2 w-1/2 md:w-auto">
+                <div id="fertilizerIcon" class="pixel-icon"></div>
+                <span id="fertilizerCount" class="text-2xl font-bold text-gray-700">0</span>
+            </div>
+            <div class="flex items-center space-x-2 w-1/2 md:w-auto justify-end">
+                <div id="levelIconDiv" class="pixel-icon"></div>
+                <span class="text-base font-semibold">LV: <span id="level" class="font-bold text-blue-500">1</span></span>
+            </div>
+            <div class="flex items-center space-x-2 w-full mt-2">
+                <span class="text-base font-semibold">XP: <span id="xp" class="font-bold text-blue-500">0</span> / <span id="xp-to-next-level" class="font-bold text-blue-500">10</span></span>
+            </div>
+        </div>
+
+        <!-- 영양제 타이머 표시 -->
+        <div id="fertilizerTimer" class="text-center text-green-600 font-bold mb-4 hidden">
+            영양제 효과 지속 시간: <span id="timerDisplay"></span>
+        </div>
+
+        <div id="farm" class="farm-visual mb-8">
+        </div>
+        <p class="text-center text-sm text-gray-500">총 밭 수: <span id="plotCount">9</span></p>
+
+        <div class="space-y-4">
+            <button id="buySeedsBtn" class="w-full bg-yellow-400 hover:bg-yellow-500 text-white font-bold py-3 px-6 button-style">
+                씨앗 구매 (₩10)
+            </button>
+            <div class="flex flex-wrap space-x-2 space-y-2 md:space-y-0">
+                <button id="openShopBtn" class="w-full md:w-auto flex-1 bg-orange-400 hover:bg-orange-500 text-white font-bold py-3 px-6 button-style">
+                    상점 열기
+                </button>
+                <button id="useFertilizerBtn" class="w-full md:w-auto flex-1 bg-green-400 hover:bg-green-500 text-white font-bold py-3 px-6 button-style">
+                    영양제 사용
+                </button>
+            </div>
+            <div class="flex flex-wrap space-x-2 space-y-2 md:space-y-0">
+                <button id="saveBtn" class="w-full md:w-auto flex-1 bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 button-style hidden">
+                    게임 저장
+                </button>
+                <button id="loadBtn" class="w-full md:w-auto flex-1 bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 button-style hidden">
+                    게임 불러오기
+                </button>
+            </div>
+            <button id="retireBtn" class="w-full bg-red-400 hover:bg-red-500 text-white font-bold py-3 px-6 button-style hidden">
+                은퇴하기
+            </button>
+        </div>
+    </div>
+
+    <!-- 상점 오버레이 -->
+    <div id="shopOverlay" class="shop-overlay">
+        <div class="shop-container">
+            <h2 class="text-2xl font-bold text-center mb-6">상점</h2>
+            <div class="space-y-4">
+                <button id="buyFertilizerBtn" class="w-full bg-green-400 hover:bg-green-500 text-white font-bold py-3 px-6 button-style">
+                    영양제 구매 (₩50)
+                </button>
+                <button id="expandPlotBtn" class="w-full bg-blue-400 hover:bg-blue-500 text-white font-bold py-3 px-6 button-style">
+                    밭 확장 (₩500)
+                </button>
+                <button id="closeShopBtn" class="w-full bg-gray-400 hover:bg-gray-500 text-white font-bold py-3 px-6 button-style">
+                    닫기
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 파산 메시지 박스 -->
+    <div id="bankruptcyMessageBox" class="message-box">
+        <h2 class="text-3xl font-bold mb-4">파산했습니다.</h2>
+        <p class="text-lg">농장이 처음부터 다시 시작됩니다.</p>
+    </div>
+
+    <script>
+        // 게임 상태 변수
+        let money;
+        let seeds;
+        let level;
+        let xp;
+        let fertilizerCount;
+        let isFertilizerActive;
+        let fertilizerEndTime;
+        let currentCrop;
+        let isRetired;
+        let plotsUnlocked;
+        let plotExpansionCost;
+        let weedChance;
+        let farmState;
+        let gameStarted = false;
+        
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let animationFrameId;
+
+        // 게임 상태를 초기값으로 리셋하는 함수
+        function resetGameState() {
+            money = 100;
+            seeds = 0;
+            level = 1;
+            xp = 0;
+            fertilizerCount = 0;
+            isFertilizerActive = false;
+            fertilizerEndTime = 0;
+            currentCrop = 'seed';
+            isRetired = false;
+            plotsUnlocked = 9;
+            plotExpansionCost = 500;
+            weedChance = 0.01;
+            farmState = new Array(plotsUnlocked).fill(null).map(() => ({ state: 'empty', startTime: null }));
+        }
+
+        // 언어 설정
+        let language = 'ko';
+        const translations = {
+            'ko': {
+                startGame: '시작하기',
+                language: '언어: 한국어',
+                farmTitle: 'YourFarm Game',
+                buySeeds: '씨앗 구매 (₩10)',
+                openShop: '상점 열기',
+                useFertilizer: '영양제 사용',
+                saveGame: '게임 저장',
+                loadGame: '게임 불러오기',
+                retire: '은퇴하기',
+                bankruptcy: '파산했습니다.',
+                bankruptcyText: '농장이 처음부터 다시 시작됩니다.',
+                shopTitle: '상점',
+                buyFertilizer: '영양제 구매 (₩50)',
+                expandPlot: '밭 확장 (₩500)',
+                close: '닫기',
+                fertilizerTimer: '영양제 효과 지속 시간:',
+                plotCount: '총 밭 수:',
+                story: [
+                    '나는 회사 구조조정으로 해고당했다.',
+                    '15년 직장생활이 하루아침에 끝났지만, 오히려 기회라고 생각했다.',
+                    '늘 꿈꿔왔던 농사를 시작할 때가 온 것이다.',
+                    '퇴직금으로 시골의 작은 농지를 샀다.',
+                    '가족들은 걱정하지만 이미 결심했다.',
+                    '이제 진짜 농부가 되어보자.',
+                    '황량한 밭을 바라보며 막막하지만, 가슴이 뛴다.',
+                    '이제 내 손으로 직접 무언가를 키워보자.'
+                ]
+            },
+            'en': {
+                startGame: 'Start Game',
+                language: 'Language: English',
+                farmTitle: 'YourFarm Game',
+                buySeeds: 'Buy Seeds (₩10)',
+                openShop: 'Open Shop',
+                useFertilizer: 'Use Fertilizer',
+                saveGame: 'Save Game',
+                loadGame: 'Load Game',
+                retire: 'Retire',
+                bankruptcy: 'Bankrupt.',
+                bankruptcyText: 'The farm will restart from the beginning.',
+                shopTitle: 'Shop',
+                buyFertilizer: 'Buy Fertilizer (₩50)',
+                expandPlot: 'Expand Plot (₩500)',
+                close: 'Close',
+                fertilizerTimer: 'Fertilizer effect duration:',
+                plotCount: 'Total plots:',
+                story: [
+                    'I was laid off due to company restructuring.',
+                    '15 years of corporate life ended in a single day, but I saw it as an opportunity.',
+                    'The time had come to start the farming I had always dreamed of.',
+                    'With my severance pay, I bought a small plot of land in the countryside.',
+                    'My family worries, but I\'ve already made up my mind.',
+                    'Now, let\'s become a real farmer.',
+                    'Looking at the barren field, I feel lost, yet my heart races.',
+                    'Now, I\'ll grow something with my own hands.'
+                ]
+            }
+        };
+
+        // 언어에 따라 UI 텍스트를 업데이트하는 함수
+        function updateUIWithLanguage() {
+            const currentLang = translations[language];
+            document.getElementById('startGameBtn').textContent = currentLang.startGame;
+            document.getElementById('languageBtn').textContent = currentLang.language;
+            document.getElementById('game-screen').querySelector('h1').textContent = currentLang.farmTitle;
+            document.getElementById('buySeedsBtn').textContent = currentLang.buySeeds;
+            document.getElementById('openShopBtn').textContent = currentLang.openShop;
+            document.getElementById('useFertilizerBtn').textContent = currentLang.useFertilizer;
+            document.getElementById('saveBtn').textContent = currentLang.saveGame;
+            document.getElementById('loadBtn').textContent = currentLang.loadGame;
+            document.getElementById('retireBtn').textContent = currentLang.retire;
+            document.getElementById('bankruptcyMessageBox').querySelector('h2').textContent = currentLang.bankruptcy;
+            document.getElementById('bankruptcyMessageBox').querySelector('p').textContent = currentLang.bankruptcyText;
+            document.getElementById('shopOverlay').querySelector('h2').textContent = currentLang.shopTitle;
+            document.getElementById('buyFertilizerBtn').textContent = currentLang.buyFertilizer;
+            document.getElementById('expandPlotBtn').textContent = currentLang.expandPlot;
+            document.getElementById('closeShopBtn').textContent = currentLang.close;
+            document.getElementById('fertilizerTimer').querySelector('span').textContent = '';
+            document.querySelector('.text-sm.text-gray-500').textContent = `${currentLang.plotCount} ${plotsUnlocked}`;
+            updateUI(); // 다른 UI 요소도 업데이트
+        }
+        
+        // 작물 데이터 (이름, 성장 시간, 수익, 아이콘)
+        const cropData = {
+            'seed': { name: '씨앗', baseGrowTime: 10000, profit: 15, xp: 1, icon: '🌱' },
+            'carrot': { name: '당근', baseGrowTime: 20000, profit: 30, xp: 2, icon: '🥕' },
+            'sweetPotato': { name: '고구마', baseGrowTime: 40000, profit: 60, xp: 4, icon: '🍠' },
+        };
+        const weedIcon = '🌿';
+
+        const seedCost = 10;
+        const fertilizerCost = 50;
+        const fertilizerDuration = 60000; // 1분 (60000ms)
+        const growthSpeedMultiplier = 1.5;
+
+        // DOM 요소
+        const introScreen = document.getElementById('intro-screen');
+        const startMenu = document.getElementById('start-menu');
+        const storyTextContainer = document.getElementById('storyTextContainer');
+        const storyTextElement = document.getElementById('storyText');
+        const gameScreen = document.getElementById('game-screen');
+        
+        const moneyDisplay = document.getElementById('money');
+        const seedsDisplay = document.getElementById('seeds');
+        const levelDisplay = document.getElementById('level');
+        const xpDisplay = document.getElementById('xp');
+        const xpToNextLevelDisplay = document.getElementById('xp-to-next-level');
+        const fertilizerCountDisplay = document.getElementById('fertilizerCount');
+        const fertilizerTimerDiv = document.getElementById('fertilizerTimer');
+        const fertilizerTimerDisplay = document.getElementById('timerDisplay');
+        const farmContainer = document.getElementById('farm');
+        const plotCountDisplay = document.getElementById('plotCount');
+        
+        const openShopBtn = document.getElementById('openShopBtn');
+        const shopOverlay = document.getElementById('shopOverlay');
+        const closeShopBtn = document.getElementById('closeShopBtn');
+        
+        const buySeedsBtn = document.getElementById('buySeedsBtn');
+        const buyFertilizerBtn = document.getElementById('buyFertilizerBtn');
+        const useFertilizerBtn = document.getElementById('useFertilizerBtn');
+        const expandPlotBtn = document.getElementById('expandPlotBtn');
+        
+        const retireBtn = document.getElementById('retireBtn');
+        const bankruptcyMessageBox = document.getElementById('bankruptcyMessageBox');
+        
+        // 픽셀 아이콘 생성 및 적용 함수
+        function createPixelIcons() {
+            const moneyCanvas = document.createElement('canvas');
+            const moneyCtx = moneyCanvas.getContext('2d');
+            moneyCanvas.width = 64;
+            moneyCanvas.height = 64;
+            moneyCtx.imageSmoothingEnabled = false;
+
+            const moneyPixels = [
+                [0,0,0,0,1,1,1,0],
+                [0,0,1,1,2,2,2,1],
+                [0,1,2,2,2,2,2,1],
+                [1,2,2,3,3,3,2,2],
+                [1,2,3,3,3,3,3,2],
+                [1,2,3,3,3,3,3,2],
+                [0,1,2,3,3,3,2,1],
+                [0,0,1,1,2,2,1,0]
+            ];
+            const moneyColors = ['transparent', '#8B4513', '#FFD700', '#FFF8DC'];
+            for(let y = 0; y < 8; y++) {
+                for(let x = 0; x < 8; x++) {
+                    moneyCtx.fillStyle = moneyColors[moneyPixels[y][x]];
+                    moneyCtx.fillRect(x * 8, y * 8, 8, 8);
+                }
+            }
+            document.getElementById('moneyIcon').style.backgroundImage = `url(${moneyCanvas.toDataURL()})`;
+            
+            const seedsCanvas = document.createElement('canvas');
+            const seedsCtx = seedsCanvas.getContext('2d');
+            seedsCanvas.width = 64;
+            seedsCanvas.height = 64;
+            seedsCtx.imageSmoothingEnabled = false;
+            const seedPixels = [
+                [0,0,0,0,0,0,0,0],
+                [0,0,0,1,1,0,0,0],
+                [0,0,1,2,2,1,0,0],
+                [0,1,2,2,2,2,1,0],
+                [0,1,2,3,3,2,1,0],
+                [0,0,1,2,2,1,0,0],
+                [0,0,0,1,1,0,0,0],
+                [0,0,0,0,0,0,0,0]
+            ];
+            const seedColors = ['transparent', '#654321', '#8B4513', '#D2691E'];
+            for(let y = 0; y < 8; y++) {
+                for(let x = 0; x < 8; x++) {
+                    seedsCtx.fillStyle = seedColors[seedPixels[y][x]];
+                    seedsCtx.fillRect(x * 8, y * 8, 8, 8);
+                }
+            }
+            document.getElementById('seedsIcon').style.backgroundImage = `url(${seedsCanvas.toDataURL()})`;
+            
+            const fertilizerCanvas = document.createElement('canvas');
+            const fertilizerCtx = fertilizerCanvas.getContext('2d');
+            fertilizerCanvas.width = 64;
+            fertilizerCanvas.height = 64;
+            fertilizerCtx.imageSmoothingEnabled = false;
+            const fertilizerPixels = [
+                [0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0],
+                [0,0,0,1,2,2,2,2,2,2,1,0,0,0,0,0],
+                [0,0,1,2,3,3,3,3,3,3,2,1,0,0,0,0],
+                [0,1,2,3,4,4,4,4,4,4,3,2,1,0,0,0],
+                [0,1,2,3,4,5,5,5,5,4,3,2,1,0,0,0],
+                [1,2,3,4,5,6,6,6,6,5,4,3,2,1,0,0],
+                [1,2,3,4,5,6,7,7,6,5,4,3,2,1,0,0],
+                [1,2,3,4,5,6,7,7,6,5,4,3,2,1,0,0],
+                [1,2,3,4,5,6,6,6,6,5,4,3,2,1,0,0],
+                [1,2,3,4,5,5,5,5,5,5,4,3,2,1,0,0],
+                [1,2,3,4,4,4,4,4,4,4,4,3,2,1,0,0],
+                [1,2,3,3,3,3,3,3,3,3,3,3,2,1,0,0],
+                [1,2,2,2,2,2,2,2,2,2,2,2,2,1,0,0],
+                [0,1,2,2,2,2,2,2,2,2,2,2,1,0,0,0],
+                [0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+            ];
+            const fertilizerColors = ['transparent', '#2F4F4F', '#708090', '#87CEEB', '#4682B4', '#00CED1', '#40E0D0', '#E0FFFF'];
+            for(let y = 0; y < 16; y++) {
+                for(let x = 0; x < 16; x++) {
+                    fertilizerCtx.fillStyle = fertilizerColors[fertilizerPixels[y][x]];
+                    fertilizerCtx.fillRect(x * 4, y * 4, 4, 4);
+                }
+            }
+            document.getElementById('fertilizerIcon').style.backgroundImage = `url(${fertilizerCanvas.toDataURL()})`;
+        }
+
+        // 레벨 아이콘 - 방패 모양에 별
+        function createLevelIcon() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 80;
+            canvas.height = 80;
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = false;
+            
+            const pixels = [
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0],
+                [0,0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0,0,0,0],
+                [0,0,1,2,3,3,3,3,3,3,3,3,3,3,2,1,0,0,0,0],
+                [0,1,2,3,4,4,4,4,4,4,4,4,4,4,3,2,1,0,0,0],
+                [0,1,2,3,4,4,4,4,5,5,4,4,4,4,3,2,1,0,0,0],
+                [1,2,3,4,4,4,4,5,6,6,5,4,4,4,4,3,2,1,0,0],
+                [1,2,3,4,4,4,5,6,6,6,6,5,4,4,4,3,2,1,0,0],
+                [1,2,3,4,4,5,6,6,6,6,6,6,5,4,4,3,2,1,0,0],
+                [1,2,3,4,4,4,5,6,6,6,6,5,4,4,4,3,2,1,0,0],
+                [1,2,3,4,4,4,4,5,6,6,5,4,4,4,4,3,2,1,0,0],
+                [0,1,2,3,4,4,4,4,5,5,4,4,4,4,3,2,1,0,0,0],
+                [0,1,2,3,4,4,4,4,4,4,4,4,4,4,3,2,1,0,0,0],
+                [0,0,1,2,3,3,3,3,3,3,3,3,3,3,2,1,0,0,0,0],
+                [0,0,0,1,2,3,3,3,3,3,3,3,3,2,1,0,0,0,0,0],
+                [0,0,0,0,1,2,2,3,3,3,3,2,2,1,0,0,0,0,0,0],
+                [0,0,0,0,0,1,2,2,3,3,2,2,1,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,1,2,2,2,2,1,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0]
+            ];
+            
+            const colors = ['transparent', '#8B4513', '#CD853F', '#DAA520', '#FFD700', '#FFF8DC', '#FFFACD'];
+            
+            for(let y = 0; y < 20; y++) {
+                for(let x = 0; x < 20; x++) {
+                    ctx.fillStyle = colors[pixels[y][x]];
+                    ctx.fillRect(x * 4, y * 4, 4, 4);
+                }
+            }
+            document.getElementById('levelIconDiv').style.backgroundImage = `url(${canvas.toDataURL()})`;
+        }
+        
+        // 스토리 타이핑 효과 함수
+        async function typeWriter(text, element, delay = 50) {
+            let i = 0;
+            return new Promise((resolve) => {
+                function type() {
+                    if (i < text.length) {
+                        element.textContent += text.charAt(i);
+                        i++;
+                        setTimeout(type, delay);
+                    } else {
+                        resolve();
+                    }
+                }
+                type();
+            });
+        }
+        
+        async function startStory() {
+            startMenu.classList.add('hidden');
+            storyTextContainer.classList.remove('hidden');
+            
+            const story = translations[language].story;
+            for (const line of story) {
+                storyTextElement.textContent = '';
+                await typeWriter(line, storyTextElement);
+                await new Promise(resolve => setTimeout(resolve, 1500)); // 문장 간 딜레이
+            }
+            
+            // 스토리 종료 후 게임 시작
+            storyTextContainer.classList.add('hidden');
+            introScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            startGame();
+        }
+
+        // 게임 시작 함수
+        function startGame() {
+            if (gameStarted) return;
+            gameStarted = true;
+            resetGameState();
+            renderFarm();
+            updateUIWithLanguage();
+            animationFrameId = requestAnimationFrame(gameLoop);
+            setInterval(checkRandomEvents, 3000); // 3초마다 이벤트 확인
+        }
+
+        // UI 업데이트 함수
+        function updateUI() {
+            moneyDisplay.textContent = `₩${money}`;
+            seedsDisplay.textContent = seeds;
+            fertilizerCountDisplay.textContent = fertilizerCount; // Fix: Add this line to update the fertilizer count
+            levelDisplay.textContent = level;
+            xpDisplay.textContent = xp;
+            
+            // 다음 레벨 XP 계산 (1000 레벨 이후는 고정값 사용)
+            const nextLevelXp = (level <= xpRequired.length) ? xpRequired[level - 1] : 1000;
+            xpToNextLevelDisplay.textContent = nextLevelXp;
+
+            // 버튼 상태 확인
+            buySeedsBtn.disabled = money < seedCost || isRetired;
+            buyFertilizerBtn.disabled = money < fertilizerCost || isRetired;
+            useFertilizerBtn.disabled = fertilizerCount <= 0 || isFertilizerActive || isRetired;
+            
+            // 밭 확장 버튼 텍스트와 상태 업데이트
+            expandPlotBtn.textContent = `${translations[language].expandPlot.replace('500', plotExpansionCost)}`;
+            expandPlotBtn.disabled = money < plotExpansionCost || isRetired;
+            plotCountDisplay.textContent = plotsUnlocked;
+
+            // 은퇴 버튼 표시
+            if (level >= 1000) {
+                retireBtn.classList.remove('hidden');
+            } else {
+                retireBtn.classList.add('hidden');
+            }
+        }
+
+        function renderFarm() {
+            farmContainer.innerHTML = '';
+            farmState.forEach((plot, index) => {
+                const plotElement = document.createElement('div');
+                plotElement.classList.add('farm-plot');
+                plotElement.dataset.plotId = index;
+                
+                if (plot.state === 'growing') {
+                    plotElement.classList.add('growing');
+                    // 아이콘 렌더링
+                    const iconElement = document.createElement('div');
+                    iconElement.textContent = cropData[currentCrop].icon;
+                    iconElement.classList.add('text-3xl');
+                    plotElement.appendChild(iconElement);
+
+                    // 진행 바 추가
+                    const progressBarContainer = document.createElement('div');
+                    progressBarContainer.classList.add('progress-bar-container');
+                    const progressBar = document.createElement('div');
+                    progressBar.classList.add('progress-bar');
+                    progressBarContainer.appendChild(progressBar);
+                    plotElement.appendChild(progressBarContainer);
+                } else if (plot.state === 'ready') {
+                    plotElement.classList.add('ready');
+                    // 아이콘 렌더링
+                    const iconElement = document.createElement('div');
+                    iconElement.textContent = cropData[currentCrop].icon;
+                    iconElement.classList.add('text-3xl');
+                    plotElement.appendChild(iconElement);
+                } else if (plot.state === 'weed') {
+                    plotElement.classList.add('weed-plot');
+                    // 해충 아이콘 렌더링
+                    const iconElement = document.createElement('div');
+                    iconElement.textContent = weedIcon;
+                    iconElement.classList.add('text-3xl');
+                    plotElement.appendChild(iconElement);
+                } else {
+                    plotElement.classList.add('empty-plot');
+                }
+
+                farmContainer.appendChild(plotElement);
+            });
+        }
+        
+        // 레벨별 요구 XP. 1000레벨 이후는 계산으로 대체
+        const xpRequired = [10, 25, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
+        
+        function checkLevelUp() {
+            let nextLevelXp = (level <= xpRequired.length) ? xpRequired[level - 1] : 1000;
+            if (xp >= nextLevelXp) {
+                xp -= nextLevelXp;
+                level++;
+                
+                // 새로운 작물 해금
+                if (level >= 100 && level < 500) {
+                    if (currentCrop !== 'carrot') {
+                        currentCrop = 'carrot';
+                    }
+                } else if (level >= 500 && level < 1000) {
+                    if (currentCrop !== 'sweetPotato') {
+                        currentCrop = 'sweetPotato';
+                    }
+                }
+                
+                updateUI();
+            }
+        }
+
+        // 게임 로직
+        function plantSeed(plotId) {
+            if (isRetired) return;
+            if (seeds > 0 && farmState[plotId].state === 'empty') {
+                seeds--;
+                farmState[plotId] = { state: 'growing', startTime: Date.now() };
+                playSound(440, 0.1, 'sine');
+                renderFarm();
+                updateUI();
+            }
+        }
+
+        function harvest(plotId) {
+            if (isRetired) return;
+            if (farmState[plotId].state === 'ready') {
+                const profit = cropData[currentCrop].profit;
+                const xpGained = cropData[currentCrop].xp;
+                
+                money += profit;
+                xp += xpGained;
+                
+                // 떠다니는 돈 팝업 생성
+                const moneyPopup = document.createElement('div');
+                moneyPopup.textContent = `+₩${profit}`;
+                moneyPopup.classList.add('money-popup');
+                farmContainer.appendChild(moneyPopup);
+                setTimeout(() => moneyPopup.remove(), 1000);
+                
+                // 떠다니는 XP 팝업 생성
+                const xpPopup = document.createElement('div');
+                xpPopup.textContent = `+${xpGained} XP`;
+                xpPopup.classList.add('xp-popup');
+                xpPopup.style.top = `${Math.random() * 50 + 25}%`;
+                xpPopup.style.left = `${Math.random() * 50 + 25}%`;
+                farmContainer.appendChild(xpPopup);
+                setTimeout(() => xpPopup.remove(), 1000);
+
+                playSound(880, 0.1, 'triangle');
+                farmState[plotId] = { state: 'empty', startTime: null };
+                renderFarm();
+                checkLevelUp();
+                updateUI();
+            }
+        }
+        
+        function removeWeed(plotId) {
+            if (isRetired) return;
+            if (farmState[plotId].state === 'weed') {
+                money += 5;
+                xp += 2;
+                
+                // 떠다니는 돈 팝업 생성
+                const moneyPopup = document.createElement('div');
+                moneyPopup.textContent = `+₩5`;
+                moneyPopup.classList.add('money-popup');
+                farmContainer.appendChild(moneyPopup);
+                setTimeout(() => moneyPopup.remove(), 1000);
+                
+                // 떠다니는 XP 팝업 생성
+                const xpPopup = document.createElement('div');
+                xpPopup.textContent = `+2 XP`;
+                xpPopup.classList.add('xp-popup');
+                xpPopup.style.top = `${Math.random() * 50 + 25}%`;
+                xpPopup.style.left = `${Math.random() * 50 + 25}%`;
+                farmContainer.appendChild(xpPopup);
+                setTimeout(() => xpPopup.remove(), 1000);
+
+                playSound(110, 0.1, 'sawtooth');
+                farmState[plotId] = { state: 'empty', startTime: null };
+                renderFarm();
+                checkLevelUp();
+                updateUI();
+            }
+        }
+
+        function buySeeds() {
+            if (isRetired) return;
+            if (money >= seedCost) {
+                money -= seedCost;
+                seeds += 1;
+                updateUI();
+            }
+        }
+        
+        function buyFertilizer() {
+            if (isRetired) return;
+            if (money >= fertilizerCost) {
+                money -= fertilizerCost;
+                fertilizerCount += 1;
+                updateUI();
+            }
+        }
+
+        function useFertilizer() {
+            if (isRetired) return;
+            if (fertilizerCount > 0 && !isFertilizerActive) {
+                fertilizerCount--;
+                isFertilizerActive = true;
+                fertilizerEndTime = Date.now() + fertilizerDuration;
+                updateUI();
+            }
+        }
+        
+        function expandPlot() {
+            if (isRetired) return;
+            if (money >= plotExpansionCost) {
+                money -= plotExpansionCost;
+                plotsUnlocked++;
+                plotExpansionCost += 500; // 가격이 500씩 증가
+                farmState.push({ state: 'empty', startTime: null });
+                renderFarm();
+                updateUIWithLanguage();
+            }
+        }
+
+        function retireGame() {
+            if (isRetired) return;
+            isRetired = true;
+            cancelAnimationFrame(animationFrameId);
+            // 모든 버튼 비활성화
+            document.querySelectorAll('button').forEach(btn => btn.disabled = true);
+            retireBtn.classList.remove('hidden');
+        }
+        
+        function checkRandomEvents() {
+            if (isRetired) return;
+            // 빈 밭이 있는지 확인
+            const emptyPlots = farmState.filter(plot => plot.state === 'empty');
+            if (emptyPlots.length > 0) {
+                // 무작위로 이벤트 발생
+                if (Math.random() < weedChance) {
+                    const randomPlot = emptyPlots[Math.floor(Math.random() * emptyPlots.length)];
+                    const plotIndex = farmState.indexOf(randomPlot);
+                    farmState[plotIndex].state = 'weed';
+                    renderFarm();
+                    updateUI();
+                }
+            }
+        }
+        
+        // 파산 상태 확인 및 처리
+        function checkBankruptcy() {
+            if (money <= 0 && seeds <= 0) {
+                const allPlotsEmpty = farmState.every(plot => plot.state === 'empty');
+                if (allPlotsEmpty) {
+                    cancelAnimationFrame(animationFrameId);
+                    isRetired = true;
+                    bankruptcyMessageBox.style.display = 'block';
+
+                    setTimeout(() => {
+                        bankruptcyMessageBox.style.display = 'none';
+                        gameScreen.classList.add('hidden');
+                        introScreen.classList.remove('hidden');
+                        startMenu.classList.remove('hidden');
+                        gameStarted = false;
+                        updateUIWithLanguage();
+                        document.querySelectorAll('button').forEach(btn => btn.disabled = false);
+                        retireBtn.classList.add('hidden');
+                    }, 3000);
+                }
+            }
+        }
+
+        // 게임 루프 (requestAnimationFrame 사용)
+        function gameLoop() {
+            if (isRetired) return;
+            
+            checkBankruptcy();
+
+            const now = Date.now();
+            let effectivePlantGrowTime = cropData[currentCrop].baseGrowTime;
+
+            if (isFertilizerActive) {
+                const timeLeft = fertilizerEndTime - now;
+                if (timeLeft <= 0) {
+                    isFertilizerActive = false;
+                    fertilizerTimerDiv.classList.add('hidden');
+                } else {
+                    effectivePlantGrowTime = cropData[currentCrop].baseGrowTime / growthSpeedMultiplier;
+                    fertilizerTimerDiv.classList.remove('hidden');
+                    const minutes = Math.floor(timeLeft / 60000);
+                    const seconds = Math.floor((timeLeft % 60000) / 1000);
+                    fertilizerTimerDisplay.textContent = `${minutes}분 ${seconds}초`;
+                }
+            }
+
+            // 성장 중인 작물의 진행 바 업데이트
+            farmState.forEach((plot, index) => {
+                if (plot.state === 'growing' && plot.startTime) {
+                    const elapsedTime = now - plot.startTime;
+                    const progress = Math.min(100, (elapsedTime / effectivePlantGrowTime) * 100);
+                    const plotElement = farmContainer.querySelector(`[data-plot-id="${index}"] .progress-bar`);
+                    if (plotElement) {
+                        plotElement.style.width = `${progress}%`;
+                    }
+                    if (elapsedTime >= effectivePlantGrowTime) {
+                        farmState[index] = { ...farmState[index], state: 'ready' };
+                        renderFarm();
+                        updateUI();
+                    }
+                }
+            });
+            
+            updateUI();
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        // 농장 밭에 대한 이벤트 리스너
+        farmContainer.addEventListener('click', (event) => {
+            const plotElement = event.target.closest('.farm-plot');
+            if (plotElement) {
+                const plotId = parseInt(plotElement.dataset.plotId);
+                if (farmState[plotId].state === 'empty') {
+                    plantSeed(plotId);
+                } else if (farmState[plotId].state === 'ready') {
+                    harvest(plotId);
+                } else if (farmState[plotId].state === 'weed') {
+                    removeWeed(plotId);
+                }
+            }
+        });
+
+        // 버튼에 대한 이벤트 리스너
+        buySeedsBtn.addEventListener('click', buySeeds);
+        buyFertilizerBtn.addEventListener('click', buyFertilizer);
+        useFertilizerBtn.addEventListener('click', useFertilizer);
+        expandPlotBtn.addEventListener('click', expandPlot);
+        retireBtn.addEventListener('click', retireGame);
+        
+        openShopBtn.addEventListener('click', () => {
+            if (isRetired) return;
+            shopOverlay.style.display = 'flex';
+            updateUI();
+        });
+        
+        closeShopBtn.addEventListener('click', () => {
+            shopOverlay.style.display = 'none';
+        });
+
+        // 시작 화면 버튼 이벤트 리스너
+        document.getElementById('startGameBtn').addEventListener('click', () => {
+            startStory();
+        });
+        
+        document.getElementById('languageBtn').addEventListener('click', () => {
+            language = (language === 'ko') ? 'en' : 'ko';
+            updateUIWithLanguage();
+        });
+
+        // 소리 효과 함수
+        function playSound(frequency, duration, type) {
+            if (isRetired) return;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.type = type;
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            
+            gainNode.gain.setValueAtTime(1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        // 초기 설정
+        window.onload = () => {
+            resetGameState();
+            createPixelIcons(); // 기존 아이콘 생성
+            createLevelIcon(); // 새로운 레벨 아이콘 생성
+            updateUIWithLanguage();
+        };
+    </script>
+</body>
+</html>
